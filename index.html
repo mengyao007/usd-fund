@@ -387,14 +387,33 @@ body{background:
       site.style.visibility='visible';
     }
     document.body.classList.remove('locked');
+    document.documentElement.style.overflowY='auto';
+    document.body.style.overflowY='auto';
+    document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});
     if(gate){
       gate.style.display='none';
       gate.setAttribute('aria-hidden','true');
     }
+    setTimeout(function(){
+      try{window.dispatchEvent(new Event('scroll'));}catch(e){}
+    },30);
     return false;
   };
 })();
 </script>
+
+
+<style id="v11-mobile-content-fix">
+/* iOS/Android: do not leave content hidden behind scroll-reveal animation. */
+@media (max-width:900px), (hover:none) and (pointer:coarse){
+  html{overflow-x:hidden;overflow-y:auto;-webkit-text-size-adjust:100%}
+  body:not(.locked){overflow-y:auto!important;height:auto!important;-webkit-overflow-scrolling:touch}
+  #site.ready{display:block!important;opacity:1!important;visibility:visible!important;height:auto!important;min-height:100vh}
+  .reveal,.reveal.in{opacity:1!important;transform:none!important;transition:none!important}
+  main{display:block!important;height:auto!important;overflow:visible!important}
+  .section{content-visibility:visible!important;contain:none!important}
+}
+</style>
 
 </head>
 <body class="locked">
@@ -665,15 +684,25 @@ body{background:
 <script>
 (function(){
  const gate=document.getElementById('gate'),site=document.getElementById('site'),form=document.getElementById('gateForm'),input=document.getElementById('passwordInput'),err=document.getElementById('gateError');
- function unlock(){gate.style.opacity='0';gate.style.pointerEvents='none';site.classList.add('ready');document.body.classList.remove('locked');setTimeout(()=>gate.remove(),450);}
+ function unlock(){gate.style.opacity='0';gate.style.pointerEvents='none';site.classList.add('ready');document.body.classList.remove('locked');document.documentElement.style.overflowY='auto';document.body.style.overflowY='auto';document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));setTimeout(()=>{if(gate&&gate.parentNode)gate.remove();try{window.dispatchEvent(new Event('scroll'));}catch(e){}},60);}
  let hasAccess=false;try{hasAccess=sessionStorage.getItem('htfund_access')==='1'}catch(e){} if(hasAccess) unlock();
  form.addEventListener('submit',e=>{if(window.htFundUnlock){window.htFundUnlock(e);return;}e.preventDefault();});
  const topbar=document.getElementById('topbar'),progress=document.getElementById('progress'),menu=document.getElementById('menu'),mobileNav=document.getElementById('mobileNav');
  menu.addEventListener('click',()=>mobileNav.classList.toggle('open'));mobileNav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>mobileNav.classList.remove('open')));
  function onScroll(){const y=window.scrollY;topbar.classList.toggle('scrolled',y>40);const h=document.documentElement.scrollHeight-innerHeight;progress.style.width=(h?y/h*100:0)+'%';}
  addEventListener('scroll',onScroll,{passive:true});onScroll();
- const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
- const sectionIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}}),{rootMargin:'-35% 0px -55% 0px'});document.querySelectorAll('section[id]').forEach(s=>sectionIO.observe(s));
+ const revealEls=[...document.querySelectorAll('.reveal')];
+ const mobileLike=window.matchMedia&&window.matchMedia('(max-width:900px), (hover:none) and (pointer:coarse)').matches;
+ if(mobileLike||!('IntersectionObserver' in window)){
+   revealEls.forEach(el=>el.classList.add('in'));
+ }else{
+   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.08,rootMargin:'0px 0px -8% 0px'});
+   revealEls.forEach(el=>io.observe(el));
+ }
+ if('IntersectionObserver' in window){
+   const sectionIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}}),{rootMargin:'-35% 0px -55% 0px'});
+   document.querySelectorAll('section[id]').forEach(s=>sectionIO.observe(s));
+ }
  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');}));
  document.querySelectorAll('.case-card').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('open')));
  document.querySelectorAll('.qa-q').forEach(q=>q.addEventListener('click',()=>q.parentElement.classList.toggle('open')));
